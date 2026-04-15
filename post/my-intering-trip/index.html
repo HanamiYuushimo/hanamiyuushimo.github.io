@@ -471,61 +471,88 @@ body:not(.heimu_toggle_on) .heimu.off .new,body:not(.heimu_toggle_on) .heimu.off
 
   
   <script>(function() {
-    // 重要：请确保这里的路径与你上传文件的位置一致
+    // 1. 请确保路径正确（根据你实际上传的位置修改）
     const LOCAL_JS_PATH = "/abcjs-basic-min.js"; 
 
-    console.log("本地 ABCJS 尝试启动...");
+    console.log("🔍 [ABCJS-Debug] 脚本开始运行...");
 
-    // 1. 注入 CSS
+    // 2. 注入强制样式（增加 z-index 和最小高度，防止被遮挡）
     const style = document.createElement('style');
     style.innerHTML = `
         .abc-render-container {
             background: #fff !important;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            overflow-x: auto;
+            padding: 20px !important;
+            margin: 20px 0 !important;
+            min-height: 100px;
+            border: 1px solid #eee;
+            display: block !important;
+            visibility: visible !important;
         }
-        .abc-render-container svg path, .abc-render-container svg text { fill: #000 !important; stroke: #000 !important; }
+        .abc-render-container svg { display: block !important; }
         .abc-hidden { display: none !important; }
     `;
     document.head.appendChild(style);
 
-    // 2. 渲染函数
+    // 3. 核心渲染逻辑
     function doRender() {
+        // 探测页面上有多少个 abc 代码块
         const blocks = document.querySelectorAll('code.language-abc');
-        blocks.forEach((el) => {
+        
+        if (blocks.length > 0) {
+            console.log(`🎯 [ABCJS-Debug] 发现 ${blocks.length} 个乐谱代码块，准备渲染...`);
+        }
+
+        blocks.forEach((el, index) => {
             const pre = el.parentElement;
+            // 避免重复渲染
             if (pre && !pre.classList.contains('abc-hidden')) {
                 const container = document.createElement('div');
+                container.id = "abc-score-" + index;
                 container.className = 'abc-render-container';
+                
                 pre.parentNode.insertBefore(container, pre);
                 pre.classList.add('abc-hidden');
 
                 if (window.ABCJS) {
-                    ABCJS.renderAbc(container, el.textContent.trim(), { responsive: 'resize' });
+                    try {
+                        ABCJS.renderAbc(container, el.textContent.trim(), { 
+                            responsive: 'resize',
+                            add_classes: true 
+                        });
+                        console.log(`✅ [ABCJS-Debug] 乐谱 #${index} 渲染成功`);
+                    } catch (err) {
+                        console.error(`❌ [ABCJS-Debug] 渲染出错:`, err);
+                    }
                 } else {
-                    container.innerHTML = "<p style='color:red'>ABCJS 文件已加载但变量未定义，请检查文件完整性。</p>";
+                    console.error("❗ [ABCJS-Debug] 变量 ABCJS 未定义，脚本可能没执行完。");
+                    container.innerHTML = "ABCJS 尚未准备就绪";
                 }
             }
         });
     }
 
-    // 3. 加载本地文件
-    const script = document.createElement('script');
-    script.src = LOCAL_JS_PATH;
-    script.onload = () => {
-        console.log("本地 ABCJS 脚本执行成功");
+    // 4. 加载本地 JS 并通过回调触发
+    if (!window.ABCJS) {
+        const script = document.createElement('script');
+        script.src = LOCAL_JS_PATH;
+        script.async = true;
+        script.onload = () => {
+            console.log("📦 [ABCJS-Debug] 本地库文件加载完成");
+            // 延迟一小会儿执行，确保 DOM 已经完全稳定
+            setTimeout(doRender, 100);
+        };
+        document.head.appendChild(script);
+    } else {
         doRender();
-    };
-    script.onerror = () => {
-        console.error("无法找到本地文件：" + LOCAL_JS_PATH + "，请确认文件已上传至 static 目录。");
-    };
-    document.head.appendChild(script);
+    }
 
-    // 针对 PJAX 异步加载的监听
-    new MutationObserver(doRender).observe(document.body, { childList: true, subtree: true });
+    // 5. 持续监听（解决文章内跳转不刷新的问题）
+    const observer = new MutationObserver(() => {
+        if (document.querySelectorAll('code.language-abc').length > 0) {
+            doRender();
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 })();</script>
   
 
