@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hanamiyuushimo.github.io/sitemap.xml
