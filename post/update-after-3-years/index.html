@@ -316,33 +316,36 @@ body:not(.heimu_toggle_on) .heimu.off .new,body:not(.heimu_toggle_on) .heimu.off
     // ⚠️ 请确保路径正确，保持不变
     const LOCAL_JS_PATH = "/abcjs-basic-min.js"; 
 
-    // 1. 注入强制 CSS 样式
-    // 这个部分最关键！它强制锁死 SVG 的内部颜色为黑色，不受深色模式影响
-    // 并且强制隐藏原代码块。
+    console.log("🎹 [ABCJS] 启动深色模式配置...");
+
+    // 1. 注入强制 CSS 样式 (黑底白谱)
     const style = document.createElement('style');
     style.innerHTML = `
         .abc-render-container {
-            background: #ffffff !important; /* 强制背景为白 */
+            background: #000000 !important; /* 强制背景为纯黑，或 #1a1a1a 深灰 */
             padding: 2rem !important;
             margin: 1.5rem 0 !important;
             border-radius: 8px !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-            overflow-x: auto !important;
+            border: 1px solid #333 !important;
+            overflow: visible !important; /* 关键：防止内部元素被切断 */
             display: block !important;
             visibility: visible !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
         
-        /* 核心：强制 SVG 内部所有元素显示为黑色 */
+        /* 核心：强制 SVG 内部元素显示为白色 */
         .abc-render-container svg {
             display: block !important;
-            fill: #000000 !important;   /* 强制音符为黑 */
-            color: #000000 !important;  /* 强制文字为黑 */
+            fill: #ffffff !important;   /* 强制音符为白 */
+            color: #ffffff !important;  /* 强制文字为白 */
+            max-width: 100% !important;
         }
         
         .abc-render-container svg path, 
         .abc-render-container svg text {
-            stroke: #000000 !important; /* 强制五线谱、连音线为黑 */
-            fill: #000000 !important;
+            stroke: #ffffff !important; /* 强制五线谱、连音线为白 */
+            fill: #ffffff !important;
         }
 
         /* 隐藏原代码块 */
@@ -366,10 +369,24 @@ body:not(.heimu_toggle_on) .heimu.off .new,body:not(.heimu_toggle_on) .heimu.off
                 pre.classList.add('abc-hidden');
 
                 if (window.ABCJS) {
+                    // 调用 ABCJS 渲染，并加入额外配置
                     ABCJS.renderAbc(container, el.textContent.trim(), { 
-                        responsive: 'resize'
+                        responsive: 'resize',
+                        add_classes: true, // 增加类名，方便通过 CSS 控制详细样式
+                        staffwidth: 740 // 尝试设置一个预估宽度，有助于计算 SVG 高度
                     });
-                    console.log(`✅ [ABCJS] 乐谱 #${index} 样式已调整`);
+
+                    // 🎯 关键步骤：强制修正 SVG 高度
+                    // 有时浏览器计算 SVG 高度不准，我们手动把实际高度赋给容器
+                    setTimeout(() => {
+                        const svgElement = container.querySelector('svg');
+                        if (svgElement) {
+                            const bBox = svgElement.getBBox();
+                            // 预留一些内边距，防止贴底
+                            container.style.height = (bBox.height + 60) + "px"; 
+                            console.log(`✅ [ABCJS] 乐谱 #${index} 高度已修正为 ${container.style.height}`);
+                        }
+                    }, 200); // 稍微延迟，确保 SVG 已完全绘制
                 } else {
                     console.error("❗ [ABCJS] 变量未定义，脚本执行早产。");
                 }
@@ -377,12 +394,12 @@ body:not(.heimu_toggle_on) .heimu.off .new,body:not(.heimu_toggle_on) .heimu.off
         });
     }
 
-    // 3. 加载本地 JS
+    // 3. 加载本地 JS 并执行
     if (!window.ABCJS) {
         const script = document.createElement('script');
         script.src = LOCAL_JS_PATH;
         script.onload = () => {
-            console.log("✅ [ABCJS] 本地库加载成功");
+            console.log("✅ [ABCJS] 本地库加载成功，开始深色渲染...");
             doRender();
             // 如果成功加载过库，开启 PJAX 监听
             const observer = new MutationObserver(doRender);
