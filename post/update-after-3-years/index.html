@@ -322,7 +322,7 @@ body:not(.heimu_toggle_on) .heimu.off .new,body:not(.heimu_toggle_on) .heimu.off
     const style = document.createElement('style');
     style.innerHTML = `
         .abc-render-container {
-            background: #000000 !important; /* 强制背景为纯黑，或 #1a1a1a 深灰 */
+            background: #1a1a1a !important; /* 强制背景为纯黑，或 #1a1a1a 深灰 */
             padding: 2rem !important;
             margin: 1.5rem 0 !important;
             border-radius: 8px !important;
@@ -337,15 +337,15 @@ body:not(.heimu_toggle_on) .heimu.off .new,body:not(.heimu_toggle_on) .heimu.off
         /* 核心：强制 SVG 内部元素显示为白色 */
         .abc-render-container svg {
             display: block !important;
-            fill: #ffffff !important;   /* 强制音符为白 */
-            color: #ffffff !important;  /* 强制文字为白 */
+            fill: #dadada !important;   /* 强制音符为白 */
+            color: #dadada !important;  /* 强制文字为白 */
             max-width: 100% !important;
         }
         
         .abc-render-container svg path, 
         .abc-render-container svg text {
-            stroke: #ffffff !important; /* 强制五线谱、连音线为白 */
-            fill: #ffffff !important;
+            stroke: #dadada !important; /* 强制五线谱、连音线为白 */
+            fill: #dadada !important;
         }
 
         /* 隐藏原代码块 */
