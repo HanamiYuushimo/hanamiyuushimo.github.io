@@ -313,47 +313,84 @@ body:not(.heimu_toggle_on) .heimu.off .new,body:not(.heimu_toggle_on) .heimu.off
 
   
   <script>(function() {
+    // ⚠️ 请确保路径正确，保持不变
     const LOCAL_JS_PATH = "/abcjs-basic-min.js"; 
 
-    function startRender() {
-        const blocks = document.querySelectorAll('code.language-abc');
+    // 1. 注入强制 CSS 样式
+    // 这个部分最关键！它强制锁死 SVG 的内部颜色为黑色，不受深色模式影响
+    // 并且强制隐藏原代码块。
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .abc-render-container {
+            background: #ffffff !important; /* 强制背景为白 */
+            padding: 2rem !important;
+            margin: 1.5rem 0 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+            overflow-x: auto !important;
+            display: block !important;
+            visibility: visible !important;
+        }
         
-        blocks.forEach((el) => {
+        /* 核心：强制 SVG 内部所有元素显示为黑色 */
+        .abc-render-container svg {
+            display: block !important;
+            fill: #000000 !important;   /* 强制音符为黑 */
+            color: #000000 !important;  /* 强制文字为黑 */
+        }
+        
+        .abc-render-container svg path, 
+        .abc-render-container svg text {
+            stroke: #000000 !important; /* 强制五线谱、连音线为黑 */
+            fill: #000000 !important;
+        }
+
+        /* 隐藏原代码块 */
+        .abc-hidden { display: none !important; }
+    `;
+    document.head.appendChild(style);
+
+    // 2. 渲染函数
+    function doRender() {
+        const blocks = document.querySelectorAll('code.language-abc');
+        blocks.forEach((el, index) => {
             const pre = el.parentElement;
-            // 如果已经渲染过（有了容器），就不再重复
-            if (!pre || pre.classList.contains('abc-hidden')) return;
+            if (pre && !pre.classList.contains('abc-hidden')) {
+                // 创建一个全新的容器
+                const container = document.createElement('div');
+                container.id = "abc-container-" + index;
+                container.className = 'abc-render-container';
+                
+                // 将代码块隐藏，并插入新容器
+                pre.parentNode.insertBefore(container, pre);
+                pre.classList.add('abc-hidden');
 
-            const container = document.createElement('div');
-            container.style.background = "#fff";
-            container.style.padding = "20px";
-            container.style.margin = "10px 0";
-            container.style.borderRadius = "8px";
-            
-            pre.parentNode.insertBefore(container, pre);
-            pre.classList.add('abc-hidden');
-
-            // 直接调用渲染
-            ABCJS.renderAbc(container, el.textContent.trim(), { 
-                responsive: 'resize'
-            });
+                if (window.ABCJS) {
+                    ABCJS.renderAbc(container, el.textContent.trim(), { 
+                        responsive: 'resize'
+                    });
+                    console.log(`✅ [ABCJS] 乐谱 #${index} 样式已调整`);
+                } else {
+                    console.error("❗ [ABCJS] 变量未定义，脚本执行早产。");
+                }
+            }
         });
     }
 
-    // 核心：先加载 JS，在 onload 事件里才允许执行渲染逻辑
+    // 3. 加载本地 JS
     if (!window.ABCJS) {
         const script = document.createElement('script');
         script.src = LOCAL_JS_PATH;
         script.onload = () => {
-            console.log("✅ ABCJS 已就绪，开始渲染...");
-            startRender();
-            
-            // 之后才开启监听，防止在库加载完之前乱跑
-            const observer = new MutationObserver(startRender);
+            console.log("✅ [ABCJS] 本地库加载成功");
+            doRender();
+            // 如果成功加载过库，开启 PJAX 监听
+            const observer = new MutationObserver(doRender);
             observer.observe(document.body, { childList: true, subtree: true });
         };
         document.head.appendChild(script);
     } else {
-        startRender();
+        doRender();
     }
 })();</script>
   
