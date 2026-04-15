@@ -325,56 +325,63 @@ body:not(.heimu_toggle_on) .heimu.off .new,body:not(.heimu_toggle_on) .heimu.off
   
 
   
-  <script><script src="https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.2.2/abcjs-basic-min.js"></script>
+  <script>(function() {
+    // 重要：请确保这里的路径与你上传文件的位置一致
+    const LOCAL_JS_PATH = "/abcjs-basic-min.js"; 
 
-<script>
-  function renderAbcScores() {
-    // 查找所有 class 为 language-abc 的代码块 (Markdown 渲染后的默认格式)
-    const abcElements = document.querySelectorAll('code.language-abc');
-    
-    abcElements.forEach((el) => {
-      const abcData = el.textContent; // 获取 ABC 代码内容
-      const container = document.createElement('div');
-      container.className = 'abcjs-container';
-      
-      // 替换原本的 <pre> 标签
-      const preElement = el.parentElement;
-      if (preElement && preElement.tagName === 'PRE') {
-        preElement.parentNode.replaceChild(container, preElement);
-        // 执行渲染
-        ABCJS.renderAbc(container, abcData, { 
-          responsive: 'resize',
-          paddingright: 0,
-          paddingleft: 0
+    console.log("本地 ABCJS 尝试启动...");
+
+    // 1. 注入 CSS
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .abc-render-container {
+            background: #fff !important;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            overflow-x: auto;
+        }
+        .abc-render-container svg path, .abc-render-container svg text { fill: #000 !important; stroke: #000 !important; }
+        .abc-hidden { display: none !important; }
+    `;
+    document.head.appendChild(style);
+
+    // 2. 渲染函数
+    function doRender() {
+        const blocks = document.querySelectorAll('code.language-abc');
+        blocks.forEach((el) => {
+            const pre = el.parentElement;
+            if (pre && !pre.classList.contains('abc-hidden')) {
+                const container = document.createElement('div');
+                container.className = 'abc-render-container';
+                pre.parentNode.insertBefore(container, pre);
+                pre.classList.add('abc-hidden');
+
+                if (window.ABCJS) {
+                    ABCJS.renderAbc(container, el.textContent.trim(), { responsive: 'resize' });
+                } else {
+                    container.innerHTML = "<p style='color:red'>ABCJS 文件已加载但变量未定义，请检查文件完整性。</p>";
+                }
+            }
         });
-      }
-    });
-  }
-
-  // 确保在页面加载完成后运行
-  if (document.readyState === 'complete') {
-    renderAbcScores();
-  } else {
-    window.addEventListener('load', renderAbcScores);
-  }
-</script>
-
-<style>
-  /* 可选：为生成的五线谱添加一些样式 */
-  .abcjs-container {
-    overflow-x: auto;
-    background: #fff;
-    padding: 1rem 0;
-    margin: 1rem 0;
-    border-radius: 8px;
-  }
-  /* 适配深色模式（如果你的主题支持） */
-  @media (prefers-color-scheme: dark) {
-    .abcjs-container svg {
-      filter: invert(0.9) hue-rotate(180deg);
     }
-  }
-</style></script>
+
+    // 3. 加载本地文件
+    const script = document.createElement('script');
+    script.src = LOCAL_JS_PATH;
+    script.onload = () => {
+        console.log("本地 ABCJS 脚本执行成功");
+        doRender();
+    };
+    script.onerror = () => {
+        console.error("无法找到本地文件：" + LOCAL_JS_PATH + "，请确认文件已上传至 static 目录。");
+    };
+    document.head.appendChild(script);
+
+    // 针对 PJAX 异步加载的监听
+    new MutationObserver(doRender).observe(document.body, { childList: true, subtree: true });
+})();</script>
   
 
 </body>
